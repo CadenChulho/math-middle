@@ -7,7 +7,7 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   const { pw } = req.query;
-  const adminPw = process.env.ADMIN_PW || 'math1234!';
+  const adminPw = process.env.ADMIN_PW || 'math5678!';
   if (pw !== adminPw) return res.status(401).json({ error: '인증 실패' });
 
   const { data, error } = await supabase
