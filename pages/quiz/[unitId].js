@@ -16,7 +16,7 @@ export default function QuizPage() {
   const [quizData, setQuizData] = useState(null);
   const [answers, setAnswers] = useState({});
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [phase, setPhase] = useState('loading'); // loading | quiz | submitting | result
+  const [phase, setPhase] = useState('loading');
   const [result, setResult] = useState(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [error, setError] = useState('');
@@ -46,14 +46,19 @@ export default function QuizPage() {
 
   async function handleSubmit() {
     setPhase('submitting');
-    const res = await fetch('/api/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentName, unitId, answers }),
-    });
-    const data = await res.json();
-    setResult(data);
-    setPhase('result');
+    try {
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentName, unitId, answers }),
+      });
+      const data = await res.json();
+      setResult(data);
+      setPhase('result');
+    } catch (e) {
+      setError('제출 중 오류가 발생했습니다.');
+      setPhase('quiz');
+    }
   }
 
   function handleNext() {
@@ -68,9 +73,13 @@ export default function QuizPage() {
     setAnswers(prev => ({ ...prev, [currentIdx]: val }));
   }
 
-  const diffLabel = { '하': { text: '기초', bg: 'rgba(74,222,128,0.15)', color: '#4ade80' }, '중': { text: '표준', bg: 'rgba(251,191,36,0.15)', color: '#fbbf24' }, '상': { text: '심화', bg: 'rgba(248,113,113,0.15)', color: '#f87171' } };
+  const diffLabel = {
+    '하': { text: '기초', bg: 'rgba(74,222,128,0.15)', color: '#4ade80' },
+    '중': { text: '표준', bg: 'rgba(251,191,36,0.15)', color: '#fbbf24' },
+    '상': { text: '심화', bg: 'rgba(248,113,113,0.15)', color: '#f87171' }
+  };
 
-  // ─── LOADING ───
+  // LOADING
   if (phase === 'loading') {
     return (
       <PageShell>
@@ -83,14 +92,15 @@ export default function QuizPage() {
     );
   }
 
-  // ─── QUIZ ───
+  // QUIZ
   if (phase === 'quiz' && q) {
-    const answered = answers[currentIdx] !== undefined;
+    const answered = answers[currentIdx] !== undefined && answers[currentIdx] !== '';
     const dl = diffLabel[q.난이도] || diffLabel['중'];
 
     return (
       <PageShell accent={accent}>
         <style>{`
+          *, *::before, *::after { box-sizing: border-box; }
           .opts-mc { display: flex; flex-direction: column; gap: 0.65rem; }
           .opt-btn {
             background: rgba(255,255,255,0.05);
@@ -104,9 +114,10 @@ export default function QuizPage() {
             text-align: left;
             transition: all 0.15s;
             display: flex; align-items: center; gap: 0.65rem;
+            width: 100%;
           }
           .opt-btn:hover { background: rgba(255,255,255,0.10); }
-          .opt-btn.selected { border-color: var(--acc); background: rgba(var(--acc-rgb), 0.12); }
+          .opt-btn.selected { border-color: ${accent}; background: rgba(108,99,255,0.12); }
           .opt-num {
             width: 26px; height: 26px; border-radius: 50%;
             background: rgba(255,255,255,0.07);
@@ -114,7 +125,7 @@ export default function QuizPage() {
             font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
             color: #9ca3af;
           }
-          .opt-btn.selected .opt-num { background: var(--acc); color: #fff; }
+          .opt-btn.selected .opt-num { background: ${accent}; color: #fff; }
           .sa-input {
             width: 100%;
             background: rgba(255,255,255,0.06);
@@ -127,35 +138,28 @@ export default function QuizPage() {
             outline: none;
             transition: border-color 0.2s;
           }
-          .sa-input:focus { border-color: var(--acc); }
+          .sa-input:focus { border-color: ${accent}; }
         `}</style>
-        <style>{`:root { --acc: ${accent}; --acc-rgb: ${hexToRgb(accent)}; }`}</style>
 
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.85rem' }}>
-            ← 홈
-          </button>
+          <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.85rem' }}>← 홈</button>
           <div style={{ fontSize: '0.82rem', color: '#9ca3af' }}>{studentName} 학생</div>
         </div>
 
-        {/* Progress */}
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{quizData.단원}</span>
             <span style={{ fontSize: '0.8rem', color: '#9ca3af', fontWeight: 700 }}>{currentIdx + 1} / {total}</span>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 6, overflow: 'hidden' }}>
-            <div style={{ background: `linear-gradient(90deg, ${accent}, ${accent}cc)`, height: '100%', borderRadius: 999, width: `${((currentIdx + 1) / total) * 100}%`, transition: 'width 0.3s' }} />
+            <div style={{ background: accent, height: '100%', borderRadius: 999, width: `${((currentIdx + 1) / total) * 100}%`, transition: 'width 0.3s' }} />
           </div>
         </div>
 
-        {/* Week info */}
         <div style={{ fontSize: '0.73rem', color: '#6b7280', marginBottom: '1.2rem' }}>
           📅 {quizData.weekStart} ~ {quizData.weekEnd} 문제
         </div>
 
-        {/* Question card */}
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 20, padding: '1.5rem', marginBottom: '1.2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <span style={{ fontSize: '0.72rem', background: dl.bg, color: dl.color, borderRadius: 999, padding: '0.2rem 0.6rem', fontWeight: 700 }}>{dl.text}</span>
@@ -164,7 +168,6 @@ export default function QuizPage() {
           <div style={{ fontSize: '1.02rem', lineHeight: 1.7, fontWeight: 500 }}>{q.문제}</div>
         </div>
 
-        {/* Answer area */}
         {q.유형 === '객관식' ? (
           <div className="opts-mc">
             {q.보기.map((opt, i) => (
@@ -191,7 +194,6 @@ export default function QuizPage() {
           </div>
         )}
 
-        {/* Navigation */}
         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
           {currentIdx > 0 && (
             <button onClick={() => setCurrentIdx(i => i - 1)} style={{ flex: 1, padding: '0.9rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#9ca3af', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.9rem' }}>
@@ -222,7 +224,7 @@ export default function QuizPage() {
     );
   }
 
-  // ─── SUBMITTING ───
+  // SUBMITTING
   if (phase === 'submitting') {
     return (
       <PageShell>
@@ -234,7 +236,7 @@ export default function QuizPage() {
     );
   }
 
-  // ─── RESULT ───
+  // RESULT
   if (phase === 'result' && result) {
     const { graded, score, total: tot } = result;
     const pct = Math.round((score / tot) * 100);
@@ -252,6 +254,13 @@ export default function QuizPage() {
           }
           .result-item.correct { border-left: 3px solid #4ade80; }
           .result-item.wrong { border-left: 3px solid #f87171; }
+          .exp-box {
+            margin-top: 0.6rem;
+            padding: 0.7rem 0.9rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            border-left: 2px solid #6C63FF;
+          }
         `}</style>
 
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -273,7 +282,7 @@ export default function QuizPage() {
               transition: 'all 0.2s',
             }}
           >
-            {showAnswers ? '정답 숨기기 🙈' : '정답 확인하기 👁'}
+            {showAnswers ? '정답 숨기기 🙈' : '정답 + 해설 보기 👁'}
           </button>
           <button
             onClick={() => router.push('/')}
@@ -289,10 +298,13 @@ export default function QuizPage() {
           </button>
         </div>
 
-        {/* Graded list */}
         {graded.map((g, i) => {
-          const dl = { '하': { text: '기초', color: '#4ade80' }, '중': { text: '표준', color: '#fbbf24' }, '상': { text: '심화', color: '#f87171' } };
-          const d = dl[g.난이도] || dl['중'];
+          const dlMap = {
+            '하': { text: '기초', color: '#4ade80' },
+            '중': { text: '표준', color: '#fbbf24' },
+            '상': { text: '심화', color: '#f87171' }
+          };
+          const d = dlMap[g.난이도] || dlMap['중'];
           return (
             <div key={i} className={`result-item ${g.isCorrect ? 'correct' : 'wrong'}`}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -302,18 +314,22 @@ export default function QuizPage() {
                 </div>
                 <span style={{ fontSize: '1.1rem' }}>{g.isCorrect ? '✅' : '❌'}</span>
               </div>
-              <div style={{ fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '0.4rem', color: '#e5e7eb' }}>{g.문제}</div>
-              <div style={{ fontSize: '0.82rem', color: '#9ca3af' }}>
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '0.5rem', color: '#e5e7eb' }}>{g.문제}</div>
+              <div style={{ fontSize: '0.82rem', color: '#9ca3af', marginBottom: '0.25rem' }}>
                 내 답: <span style={{ color: g.isCorrect ? '#4ade80' : '#f87171', fontWeight: 700 }}>{g.userAnswer || '(무응답)'}</span>
               </div>
-              {showAnswers && !g.isCorrect && (
-                <div style={{ fontSize: '0.82rem', color: '#4ade80', marginTop: '0.25rem' }}>
-                  정답: <span style={{ fontWeight: 700 }}>{g.정답}</span>
-                </div>
-              )}
-              {showAnswers && g.isCorrect && (
-                <div style={{ fontSize: '0.82rem', color: '#4ade80', marginTop: '0.25rem' }}>
-                  정답: <span style={{ fontWeight: 700 }}>{g.정답}</span> ✓
+              {showAnswers && (
+                <div className="exp-box">
+                  <div style={{ fontSize: '0.83rem', color: '#4ade80', fontWeight: 700, marginBottom: '0.35rem' }}>
+                    정답: {g.정답} {g.isCorrect ? '✓' : ''}
+                  </div>
+                  {g.해설 ? (
+                    <div style={{ fontSize: '0.8rem', color: '#c4b5fd', lineHeight: 1.7 }}>
+                      💡 {g.해설}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>해설 없음</div>
+                  )}
                 </div>
               )}
             </div>
@@ -338,20 +354,13 @@ export default function QuizPage() {
   return null;
 }
 
-function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `${r},${g},${b}`;
-}
-
 function PageShell({ children, accent = '#6C63FF' }) {
   return (
     <>
       <Head>
         <title>중1 수학 퀴즈</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
       </Head>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
