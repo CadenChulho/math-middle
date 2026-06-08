@@ -30,6 +30,7 @@ export default async function handler(req, res) {
       문제: q.문제,
       보기: q.보기,
       정답: correct,
+      해설: q.해설 || '',
       userAnswer,
       isCorrect,
     };
