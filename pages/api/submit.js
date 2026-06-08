@@ -2,8 +2,8 @@ const { getWeeklyQuestions } = require('../../lib/weeklyQuestions');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  'https://albvsukzrjeobxhawanb.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsYnZzdWt6cmplb2J4aGF3YW5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDE0ODMsImV4cCI6MjA5NTg3NzQ4M30.hg3vQ9UQ1gzdemF0jCqq4l9er5VPqWiJN3AjMMA7GqM'
 );
 
 export default async function handler(req, res) {
@@ -17,7 +17,6 @@ export default async function handler(req, res) {
   const weekData = getWeeklyQuestions(unitId);
   if (!weekData) return res.status(404).json({ error: '단원 없음' });
 
-  // Grade answers
   const graded = weekData.questions.map((q, i) => {
     const userAnswer = (answers[i] || '').trim();
     const correct = q.정답.trim();
@@ -39,7 +38,6 @@ export default async function handler(req, res) {
   const score = graded.filter(g => g.isCorrect).length;
   const total = graded.length;
 
-  // Save to Supabase
   try {
     await supabase.from('quiz_results_middle1').insert({
       student_name: studentName,
